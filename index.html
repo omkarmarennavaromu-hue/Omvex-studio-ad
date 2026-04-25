@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Omvex Studio — Cinematic Scrolling Ad</title>
+  <meta name="description" content="Omvex Studio — We design experiences. Not websites." />
+
+  <!-- Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- GSAP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #000;
+      --fg: #fff;
+      --muted: rgba(255,255,255,0.64);
+      --soft: rgba(255,255,255,0.1);
+      --border: rgba(255,255,255,0.14);
+      --panel: rgba(255,255,255,0.04);
+      --max: 1440px;
+      --ease: cubic-bezier(.22,1,.36,1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: "Inter", sans-serif;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      user-select: none;
+      -webkit-user-drag: none;
+      pointer-events: none;
+      filter: grayscale(100%) contrast(1.02) brightness(.9);
+      transform: scale(1.02);
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    ::selection {
+      background: #fff;
+      color: #000;
+    }
+
+    .noise {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      pointer-events: none;
+      opacity: 0.07;
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,.08) 0 1px, transparent 1px),
+        radial-gradient(circle at 80% 40%, rgba(255,255,255,.06) 0 1px, transparent 1px),
+        radial-gradient(circle at 40% 80%, rgba(255,255,255,.06) 0 1px, transparent 1px);
+      background-size: 140px 140px, 180px 180px, 220px 220px;
+      mix-blend-mode: screen;
+    }
+
+    .progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      width: 100%;
+      transform-origin: left center;
+      transform: scaleX(0);
+      background: linear-gradient(90deg, #fff 0%, rgba(255,255,255,.4) 100%);
+      z-index: 101;
+    }
+
+    .section {
+      position: relative;
+      min-height: 100vh;
+      width: 100%;
+    }
+
+    .full {
+      min-height: 100vh;
+    }
+
+    .wrap {
+      width: min(calc(100% - 48px), var(--max));
+      margin: 0 auto;
+    }
+
+    .centered {
+      display: grid;
+      place-items: center;
+      text-align: center;
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: .28em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .mega {
+      font-size: clamp(48px, 10vw, 160px);
+      line-height: .92;
+      letter-spacing: -.06em;
+      font-weight: 900;
+    }
+
+    .headline {
+      font-size: clamp(34px, 6.5vw, 104px);
+      line-height: .95;
+      letter-spacing: -.055em;
+      font-weight: 800;
+    }
+
+    .sub {
+      font-size: clamp(16px, 1.5vw, 24px);
+      line-height: 1.45;
+      color: var(--muted);
+      max-width: 820px;
+    }
+
+    .intro {
+      padding: 10vh 0 8vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .intro-inner {
+      width: min(calc(100% - 48px), 1320px);
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .intro-copy {
+      margin-bottom: 7vh;
+    }
+
+    .intro-title {
+      font-size: clamp(34px, 7vw, 110px);
+      line-height: .95;
+      letter-spacing: -.06em;
+      font-weight: 900;
+    }
+
+    .ugly-mockup-wrap {
+      display: flex;
+      justify-content: center;
+      perspective: 1400px;
+    }
+
+    .ugly-mockup {
+      width: min(1100px, 92vw);
+      aspect-ratio: 16 / 9;
+      border-radius: 24px;
+      background:
+        linear-gradient(180deg, #f1f1f1 0%, #d9d9d9 100%);
+      box-shadow:
+        0 50px 120px rgba(0,0,0,.45),
+        0 0 0 1px rgba(255,255,255,.05) inset;
+      overflow: hidden;
+      transform: rotateX(10deg) scale(.96);
+      opacity: 0;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .mockup-browser {
+      height: 54px;
+      background: #c9c9c9;
+      border-bottom: 1px solid rgba(0,0,0,.12);
+      display: flex;
+      align-items: center;
+      padding: 0 18px;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #9b9b9b;
+    }
+
+    .mockup-page {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      height: calc(100% - 54px);
+      background: linear-gradient(180deg, #fafafa 0%, #ececec 100%);
+    }
+
+    .mockup-sidebar {
+      background: #efefef;
+      border-right: 1px solid rgba(0,0,0,.08);
+      padding: 22px;
+    }
+
+    .mockup-logo {
+      width: 70%;
+      height: 18px;
+      background: #c3c3c3;
+      border-radius: 999px;
+      margin-bottom: 22px;
+    }
+
+    .mockup-nav div {
+      height: 14px;
+      background: #d0d0d0;
+      border-radius: 8px;
+      margin-bottom: 14px;
+      width: 100%;
+    }
+
+    .mockup-nav div:nth-child(2) { width: 86%; }
+    .mockup-nav div:nth-child(3) { width: 76%; }
+    .mockup-nav div:nth-child(4) { width: 91%; }
+
+    .mockup-main {
+      padding: 26px;
+      display: grid;
+      grid-template-rows: 160px 1fr;
+      gap: 22px;
+    }
+
+    .mockup-hero {
+      border-radius: 18px;
+      background:
+        linear-gradient(135deg, #a8a8a8 0%, #dedede 50%, #bdbdbd 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mockup-hero::before {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border-radius: 14px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,.1)),
+        repeating-linear-gradient(
+          90deg,
+          rgba(0,0,0,.05) 0 80px,
+          rgba(255,255,255,.15) 80px 160px
+        );
+    }
+
+    .mockup-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .mockup-card {
+      border-radius: 18px;
+      background: #f6f6f6;
+      border: 1px solid rgba(0,0,0,.08);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 220px;
+    }
+
+    .mockup-card-top {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .mockup-line {
+      height: 12px;
+      border-radius: 999px;
+      background: #cfcfcf;
+    }
+
+    .mockup-line.short { width: 58%; }
+    .mockup-line.mid { width: 78%; }
+
+    .mockup-btns {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .mockup-btn {
+      height: 34px;
+      border-radius: 999px;
+      background: #c3c3c3;
+      flex: 1;
+    }
+
+    .cut {
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 12vh 24px;
+      background: #000;
+    }
+
+    .cut h2 {
+      font-size: clamp(40px, 9vw, 150px);
+      line-height: .92;
+      letter-spacing: -.07em;
+      font-weight: 900;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10vh 0;
+      overflow: hidden;
+    }
+
+    .brand-stack {
+      text-align: center;
+      width: min(calc(100% - 48px), 1300px);
+      margin: 0 auto;
+    }
+
+    .brand-title {
+      font-size: clamp(56px, 11vw, 220px);
+      line-height: .86;
+      letter-spacing: -.08em;
+      font-weight: 900;
+      margin-bottom: 24px;
+    }
+
+    .brand-sub {
+      font-size: clamp(18px, 2vw, 30px);
+      line-height: 1.3;
+      color: var(--muted);
+      letter-spacing: -.03em;
+    }
+
+    .showcase {
+      min-height: 320vh;
+    }
+
+    .showcase-sticky {
+      position: sticky;
+      top: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      background:
+        radial-gradient(circle at 50% 30%, rgba(255,255,255,.07), transparent 50%),
+        #000;
+    }
+
+    .showcase-shell {
+      width: 100%;
+    }
+
+    .showcase-copy {
+      width: min(calc(100% - 48px), 1320px);
+      margin: 0 auto 42px;
+    }
+
+    .showcase-copy .headline {
+      max-width: 900px;
+    }
+
+    .cards-viewport {
+      overflow: visible;
+      width: 100%;
+    }
+
+    .cards-track {
+      display: flex;
+      gap: 28px;
+      width: max-content;
+      padding-left: max(24px, calc((100vw - min(calc(100vw - 48px), 1320px)) / 2));
+      padding-right: 24px;
+    }
+
+    .work-card {
+      position: relative;
+      width: min(42vw, 560px);
+      aspect-ratio: 4 / 5;
+      border-radius: 28px;
+      overflow: hidden;
+      background: #111;
+      border: 1px solid var(--border);
+      flex: 0 0 auto;
+      box-shadow: 0 40px 120px rgba(0,0,0,.35);
+    }
+
+    .work-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(0,0,0,0) 20%, rgba(0,0,0,.75) 100%);
+      pointer-events: none;
+    }
+
+    .card-media {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    .card-media img {
+      width: 100%;
+      height: 115%;
+      object-position: center;
+      will-change: transform;
+    }
+
+    .card-label {
+      position: absolute;
+      left: 24px;
+      right: 24px;
+      bottom: 22px;
+      z-index: 2;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .card-title {
+      font-size: clamp(24px, 2.6vw, 42px);
+      line-height: .95;
+      letter-spacing: -.05em;
+      font-weight: 800;
+      max-width: 80%;
+    }
+
+    .card-index {
+      font-size: 14px;
+      color: rgba(255,255,255,.6);
+      letter-spacing: .15em;
+    }
+
+    .pain {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14vh 0;
+      min-height: 180vh;
+    }
+
+    .pain-inner {
+      position: sticky;
+      top: 0;
+      min-height: 100vh;
+      width: min(calc(100% - 48px), 1200px);
+      margin: 0 auto;
+      display: grid;
+      place-items: center;
+      text-align: center;
+    }
+
+    .pain-line {
+      font-size: clamp(36px, 7vw, 120px);
+      line-height: .95;
+      letter-spacing: -.06em;
+      font-weight: 900;
+      max-width: 1180px;
+    }
+
+    .pain-line .word {
+      opacity: .08;
+      color: rgba(255,255,255,.12);
+      display: inline-block;
+      transform: translateY(18px);
+      will-change: transform, opacity;
+      margin-right: .18em;
+    }
+
+    .solution {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 12vh 0;
+    }
+
+    .solution .wrap {
+      display: grid;
+      gap: 24px;
+      justify-items: center;
+    }
+
+    .solution-line {
+      width: min(220px, 24vw);
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.9), transparent);
+      margin-bottom: 8px;
+    }
+
+    .proof {
+      padding: 14vh 0;
+      overflow: hidden;
+    }
+
+    .proof-header {
+      width: min(calc(100% - 48px), 1320px);
+      margin: 0 auto 60px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .proof-grid {
+      width: min(calc(100% - 48px), 1320px);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }
+
+    .proof-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 24px;
+      border: 1px solid var(--border);
+      background: #0d0d0d;
+      min-height: 280px;
+      box-shadow: 0 28px 80px rgba(0,0,0,.22);
+    }
+
+    .proof-card.large { grid-column: span 5; min-height: 440px; }
+    .proof-card.medium { grid-column: span 4; min-height: 360px; }
+    .proof-card.small { grid-column: span 3; min-height: 280px; }
+
+    .proof-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,.55) 100%);
+      pointer-events: none;
+    }
+
+    .proof-meta {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 16px;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: rgba(255,255,255,.82);
+    }
+
+    .final {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12vh 0;
+      text-align: center;
+    }
+
+    .final-stack {
+      width: min(calc(100% - 48px), 1200px);
+      margin: 0 auto;
+      display: grid;
+      gap: 26px;
+      justify-items: center;
+    }
+
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 220px;
+      padding: 18px 30px;
+      border-radius: 999px;
+      background: #fff;
+      color: #000;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: -.02em;
+      border: 1px solid #fff;
+      transition: transform .45s var(--ease), background .45s var(--ease), color .45s var(--ease), box-shadow .45s var(--ease);
+      box-shadow: 0 20px 50px rgba(255,255,255,.14);
+    }
+
+    .cta:hover {
+      transform: translateY(-2px) scale(1.01);
+      background: transparent;
+      color: #fff;
+      box-shadow: 0 30px 60px rgba(255,255,255,.08);
+    }
+
+    .footer-note {
+      color: rgba(255,255,255,.42);
+      font-size: 13px;
+      letter-spacing: .04em;
+    }
+
+    .vignette {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at center, transparent 35%, rgba(0,0,0,.22) 100%);
+      z-index: 1;
+    }
+
+    @media (max-width: 1100px) {
+      .work-card {
+        width: 68vw;
+      }
+
+      .proof-card.large,
+      .proof-card.medium,
+      .proof-card.small {
+        grid-column: span 6;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .wrap,
+      .intro-inner,
+      .brand-stack,
+      .showcase-copy,
+      .proof-header,
+      .proof-grid,
+      .final-stack,
+      .pain-inner {
+        width: min(calc(100% - 28px), var(--max));
+      }
+
+      .mockup-page {
+        grid-template-columns: 1fr;
+      }
+
+      .mockup-sidebar {
+        display: none;
+      }
+
+      .mockup-main {
+        grid-template-rows: 120px 1fr;
+        padding: 14px;
+      }
+
+      .mockup-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .cards-track {
+        gap: 18px;
+        padding-left: 16px;
+      }
+
+      .work-card {
+        width: 82vw;
+        border-radius: 22px;
+      }
+
+      .proof-card.large,
+      .proof-card.medium,
+      .proof-card.small {
+        grid-column: span 12;
+        min-height: 260px;
+      }
+
+      .cta {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="noise"></div>
+  <div class="progress"></div>
+
+  <main>
+    <!-- 1) Intro -->
+    <section class="section intro" id="intro">
+      <div class="intro-inner">
+        <div class="intro-copy">
+          <div class="eyebrow">creative websites, reimagined</div>
+          <h1 class="intro-title">Most websites look like this.</h1>
+        </div>
+
+        <div class="ugly-mockup-wrap">
+          <div class="ugly-mockup" aria-hidden="true">
+            <div class="mockup-browser">
+              <div class="dot"></div>
+              <div class="dot"></div>
+              <div class="dot"></div>
+            </div>
+            <div class="mockup-page">
+              <div class="mockup-sidebar">
+                <div class="mockup-logo"></div>
+                <div class="mockup-nav">
+                  <div></div>
+                  <div></div>
+                  <div></div>
+                  <div></div>
+                </div>
+              </div>
+              <div class="mockup-main">
+                <div class="mockup-hero"></div>
+                <div class="mockup-grid">
+                  <div class="mockup-card">
+                    <div class="mockup-card-top">
+                      <div class="mockup-line short"></div>
+                      <div class="mockup-line"></div>
+                      <div class="mockup-line mid"></div>
+                    </div>
+                    <div class="mockup-btns">
+                      <div class="mockup-btn"></div>
+                      <div class="mockup-btn"></div>
+                    </div>
+                  </div>
+                  <div class="mockup-card">
+                    <div class="mockup-card-top">
+                      <div class="mockup-line short"></div>
+                      <div class="mockup-line mid"></div>
+                      <div class="mockup-line"></div>
+                    </div>
+                    <div class="mockup-btns">
+                      <div class="mockup-btn"></div>
+                      <div class="mockup-btn"></div>
+                    </div>
+                  </div>
+                  <div class="mockup-card">
+                    <div class="mockup-card-top">
+                      <div class="mockup-line mid"></div>
+                      <div class="mockup-line"></div>
+                      <div class="mockup-line short"></div>
+                    </div>
+                    <div class="mockup-btns">
+                      <div class="mockup-btn"></div>
+                      <div class="mockup-btn"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2) Hard cut -->
+    <section class="section cut" id="cut">
+      <h2>We fix that.</h2>
+    </section>
+
+    <!-- 3) Brand -->
+    <section class="section brand" id="brand">
+      <div class="brand-stack">
+        <div class="eyebrow">Omvex Studio</div>
+        <h2 class="brand-title">OMVEX STUDIO</h2>
+        <p class="brand-sub">We design experiences. Not websites.</p>
+      </div>
+    </section>
+
+    <!-- 4) Showcase -->
+    <section class="section showcase" id="showcase">
+      <div class="showcase-sticky">
+        <div class="showcase-shell">
+          <div class="showcase-copy">
+            <div class="eyebrow">selected directions</div>
+            <h2 class="headline">Luxury visuals. Story-driven motion. Premium perception.</h2>
+          </div>
+
+          <div class="cards-viewport">
+            <div class="cards-track">
+              <article class="work-card">
+                <div class="card-media">
+                  <img
+                    src="https://unsplash.com/photos/DB2zwau8CEM/download?force=true&w=1400"
+                    alt="Luxury UI setup"
+                  />
+                </div>
+                <div class="card-label">
+                  <div class="card-title">Luxury UI</div>
+                  <div class="card-index">01</div>
+                </div>
+              </article>
+
+              <article class="work-card">
+                <div class="card-media">
+                  <img
+                    src="https://unsplash.com/photos/QuR4IDzjv9o/download?force=true&w=1400"
+                    alt="Modern cafe website inspiration"
+                  />
+                </div>
+                <div class="card-label">
+                  <div class="card-title">Café Website</div>
+                  <div class="card-index">02</div>
+                </div>
+              </article>
+
+              <article class="work-card">
+                <div class="card-media">
+                  <img
+                    src="https://unsplash.com/photos/24RqPa3CxEQ/download?force=true&w=1400"
+                    alt="Fashion brand campaign imagery"
+                  />
+                </div>
+                <div class="card-label">
+                  <div class="card-title">Fashion Brand</div>
+                  <div class="card-index">03</div>
+                </div>
+              </article>
+
+              <article class="work-card">
+                <div class="card-media">
+                  <img
+                    src="https://unsplash.com/photos/tbi0NQLcbbU/download?force=true&w=1400"
+                    alt="Modern landing page workspace"
+                  />
+                </div>
+                <div class="card-label">
+                  <div class="card-title">Modern Landing Pages</div>
+                  <div class="card-index">04</div>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5) Pain point -->
+    <section class="section pain" id="pain">
+      <div class="pain-inner">
+        <h2 class="pain-line">Your website is losing customers every second.</h2>
+      </div>
+    </section>
+
+    <!-- 6) Solution -->
+    <section class="section solution" id="solution">
+      <div class="wrap">
+        <div class="solution-line"></div>
+        <h2 class="headline">We turn visitors into customers with design psychology and motion.</h2>
+        <p class="sub">Less clutter. More tension. Better pacing. Stronger trust. Higher intent.</p>
+      </div>
+    </section>
+
+    <!-- 7) Social proof style grid -->
+    <section class="section proof" id="proof">
+      <div class="proof-header">
+        <div class="eyebrow">premium aesthetic system</div>
+        <h2 class="headline">Every detail shapes perception.</h2>
+      </div>
+
+      <div class="proof-grid">
+        <figure class="proof-card large">
+          <img src="https://unsplash.com/photos/oZKXtbz8Yrk/download?force=true&w=1600" alt="Luxury editorial portrait" />
+          <figcaption class="proof-meta">
+            <span>Editorial</span>
+            <span>Luxury</span>
+          </figcaption>
+        </figure>
+
+        <figure class="proof-card small">
+          <img src="https://unsplash.com/photos/VbVJy_IQrBE/download?force=true&w=1200" alt="Website UX designer at work" />
+          <figcaption class="proof-meta">
+            <span>UX</span>
+            <span>Motion</span>
+          </figcaption>
+        </figure>
+
+        <figure class="proof-card medium">
+          <img src="https://unsplash.com/photos/1un4KuKCHbY/download?force=true&w=1400" alt="Modern cafe interior atmosphere" />
+          <figcaption class="proof-meta">
+            <span>Hospitality</span>
+            <span>Experience</span>
+          </figcaption>
+        </figure>
+
+        <figure class="proof-card medium">
+          <img src="https://unsplash.com/photos/ddmlJEOc4G4/download?force=true&w=1400" alt="Luxury fashion styling" />
+          <figcaption class="proof-meta">
+            <span>Fashion</span>
+            <span>Presence</span>
+          </figcaption>
+        </figure>
+
+        <figure class="proof-card small">
+          <img src="https://unsplash.com/photos/ylDi7z1hCeo/download?force=true&w=1200" alt="Premium lifestyle scene" />
+          <figcaption class="proof-meta">
+            <span>Premium</span>
+            <span>Identity</span>
+          </figcaption>
+        </figure>
+
+        <figure class="proof-card large">
+          <img src="https://unsplash.com/photos/LBCIDBJ3nTM/download?force=true&w=1600" alt="UI planning and creative development" />
+          <figcaption class="proof-meta">
+            <span>Strategy</span>
+            <span>Interface</span>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- 8) Final CTA -->
+    <section class="section final" id="final">
+      <div class="vignette"></div>
+      <div class="final-stack">
+        <div class="eyebrow">Omvex Studio</div>
+        <h2 class="mega">Ready to look premium?</h2>
+        <p class="sub">Design that feels expensive before anyone reads a word.</p>
+
+        <!-- Replace # with your contact page, form, or booking link -->
+        <a href="#" class="cta">Work with Omvex</a>
+
+        <div class="footer-note">Single-file cinematic scroll experience</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Scroll progress
+    gsap.to(".progress", {
+      scaleX: 1,
+      ease: "none",
+      scrollTrigger: {
+        scrub: true
+      }
+    });
+
+    // Intro sequence
+    const introTl = gsap.timeline({
+      scrollTrigger: {
+        trigger: "#intro",
+        start: "top top",
+        end: "bottom+=15% top",
+        scrub: 1.15
+      }
+    });
+
+    introTl
+      .from(".intro-title", {
+        y: 80,
+        opacity: 0,
+        ease: "power3.out"
+      }, 0)
+      .to(".ugly-mockup", {
+        opacity: 1,
+        y: 0,
+        rotateX: 0,
+        scale: 1,
+        duration: 1
+      }, 0.15)
+      .to(".intro-copy", {
+        y: -80,
+        opacity: 0
+      }, 0.85)
+      .to(".ugly-mockup", {
+        y: -30,
+        opacity: 0.25
+      }, 0.95);
+
+    // Cut section
+    gsap.from("#cut h2", {
+      y: 80,
+      opacity: 0,
+      duration: 1.15,
+      ease: "power4.out",
+      scrollTrigger: {
+        trigger: "#cut",
+        start: "top 70%"
+      }
+    });
+
+    // Brand reveal
+    const brandTl = gsap.timeline({
+      scrollTrigger: {
+        trigger: "#brand",
+        start: "top 72%"
+      }
+    });
+
+    brandTl
+      .from(".brand-title", {
+        y: 90,
+        opacity: 0,
+        scale: 1.04,
+        duration: 1.2,
+        ease: "power4.out"
+      })
+      .from(".brand-sub", {
+        y: 28,
+        opacity: 0,
+        duration: 0.9,
+        ease: "power3.out"
+      }, "-=0.65");
+
+    // Showcase pinned horizontal motion
+    const showcaseTl = gsap.timeline({
+      scrollTrigger: {
+        trigger: "#showcase",
+        start: "top top",
+        end: "+=2300",
+        scrub: 1,
+        pin: true,
+        anticipatePin: 1
+      }
+    });
+
+    showcaseTl
+      .from(".showcase-copy", {
+        y: 80,
+        opacity: 0,
+        duration: 0.6
+      }, 0)
+      .from(".work-card", {
+        y: 100,
+        opacity: 0,
+        stagger: 0.12,
+        duration: 0.6
+      }, 0.08)
+      .to(".cards-track", {
+        x: () => -(document.querySelector(".cards-track").scrollWidth - window.innerWidth + 80),
+        ease: "none",
+        duration: 1.8
+      }, 0.18);
+
+    // Parallax on all image blocks
+    gsap.utils.toArray(".card-media img, .proof-card img").forEach((img) => {
+      gsap.fromTo(img,
+        { yPercent: -8, scale: 1.06 },
+        {
+          yPercent: 8,
+          scale: 1,
+          ease: "none",
+          scrollTrigger: {
+            trigger: img.closest(".work-card, .proof-card"),
+            start: "top bottom",
+            end: "bottom top",
+            scrub: true
+          }
+        }
+      );
+    });
+
+    // Pain point word-by-word
+    const painLine = document.querySelector(".pain-line");
+    const words = painLine.textContent.trim().split(" ");
+    painLine.innerHTML = words.map(word => `<span class="word">${word}</span>`).join(" ");
+
+    gsap.to(".pain-line .word", {
+      opacity: 1,
+      y: 0,
+      color: "#ffffff",
+      stagger: 0.18,
+      ease: "power2.out",
+      scrollTrigger: {
+        trigger: "#pain",
+        start: "top top",
+        end: "+=1200",
+        scrub: 1,
+        pin: ".pain-inner"
+      }
+    });
+
+    // Solution reveal
+    gsap.from("#solution .solution-line", {
+      scaleX: 0,
+      transformOrigin: "center center",
+      duration: 0.9,
+      ease: "power3.out",
+      scrollTrigger: {
+        trigger: "#solution",
+        start: "top 72%"
+      }
+    });
+
+    gsap.from("#solution .headline, #solution .sub", {
+      y: 60,
+      opacity: 0,
+      stagger: 0.15,
+      duration: 1,
+      ease: "power3.out",
+      scrollTrigger: {
+        trigger: "#solution",
+        start: "top 68%"
+      }
+    });
+
+    // Proof grid reveal
+    gsap.from(".proof-header > *", {
+      y: 60,
+      opacity: 0,
+      stagger: 0.12,
+      duration: 0.9,
+      ease: "power3.out",
+      scrollTrigger: {
+        trigger: "#proof",
+        start: "top 75%"
+      }
+    });
+
+    gsap.from(".proof-card", {
+      y: 90,
+      opacity: 0,
+      stagger: 0.1,
+      duration: 1,
+      ease: "power4.out",
+      scrollTrigger: {
+        trigger: ".proof-grid",
+        start: "top 80%"
+      }
+    });
+
+    // Final CTA reveal
+    gsap.from(".final-stack > *", {
+      y: 70,
+      opacity: 0,
+      stagger: 0.12,
+      duration: 1,
+      ease: "power4.out",
+      scrollTrigger: {
+        trigger: "#final",
+        start: "top 72%"
+      }
+    });
+
+    // Refresh after all assets settle
+    window.addEventListener("load", () => {
+      ScrollTrigger.refresh();
+    });
+  </script>
+</body>
+</html>
